@@ -1,20 +1,20 @@
 # Project Structure 
 
 /SmartSpend
-│── /cmd               # Punto de entrada de la aplicación (main.go)
-│── /config            # Archivos de configuración (variables de entorno, etc.)
-│── /internal          # Código interno del backend (no accesible desde otros módulos)
-│   │── /handlers      # Controladores HTTP (manejan las peticiones)
-│   │── /services      # Lógica de negocio
-│   │── /repositories  # Acceso a la base de datos
-│   │── /models        # Definiciones de estructuras de datos
-│   │── /middlewares   # Middlewares (autenticación, logging, etc.)
-│── /pkg               # Código reutilizable (puede ser usado por otros proyectos)
-│── /db                # Migraciones y scripts para la base de datos
-│── /scripts           # Scripts útiles (ej. inicializar datos)
-│── /test              # Pruebas unitarias e integración
-│── .env               # Variables de entorno (no subir a git)
-│── go.mod             # Archivo de módulos de Go
-│── go.sum             # Checksums de dependencias
-│── Makefile           # Comandos de automatización
-│── README.md          # Documentación del proyecto
+│── /cmd # Entry point of the application (main.go)
+│── /config # Configuration files (environment variables, etc.)
+│── /internal # Internal backend code (not accessible from other modules)
+│ │── /handlers # HTTP controllers (handle requests)
+│ │── /services # Business logic
+│ │── /repositories # Database access
+│ │── /models # Data structure definitions
+│ │── /middlewares # Middlewares (authentication, logging, etc.)
+│── /pkg # Reusable code (can be used by other projects)
+│── /db # Database migrations and scripts
+│── /scripts # Useful scripts (e.g., initialize data)
+│── /test # Unit and integration tests
+│── .env # Environment variables (do not upload to git)
+│── go.mod # Go module file
+│── go.sum # Dependency checksums
+│── Makefile # Automation commands
+│── README.md # Project documentation
