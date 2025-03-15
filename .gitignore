@@ -35,3 +35,6 @@ Thumbs.db
 # Archivos específicos de los entornos de CI/CD
 *.circleci/
 *.travis/
+
+# Variables de ambiente
+.env
