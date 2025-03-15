@@ -96,11 +96,13 @@ COMMENT ON COLUMN public.movement_field_options.value IS 'Value of the option';
 CREATE SCHEMA IF NOT EXISTS auth;
 
 CREATE TABLE auth."user" (
-    user_id INT PRIMARY KEY,
+    user_id UUID DEFAULT gen_random_uuid(),
     user_name VARCHAR(50) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL, -- Campo de email con restricción de unicidad
+    password TEXT NOT NULL, -- Almacena la contraseña (se recomienda almacenar un hash)
     photo_url TEXT CHECK (photo_url ~* '^https?://.+'),
     language_id INT,
-    created_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT,
     updated_at TIMESTAMP,
     updated_by INT,
@@ -143,7 +145,7 @@ COMMENT ON COLUMN auth.permission.description IS 'Description of the permission'
 COMMENT ON COLUMN auth.permission.status IS 'Status of the permission (e.g., active, inactive)';
 
 CREATE TABLE auth.user_role (
-    user_id INT,
+    user_id UUID,
     role_id INT,
     group_id INT,
     created_at TIMESTAMP,
