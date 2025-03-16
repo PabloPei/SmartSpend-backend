@@ -7,8 +7,7 @@ import (
 	"net/http"
 
 	"github.com/PabloPei/SmartSpend-backend/conf"
-	"github.com/PabloPei/SmartSpend-backend/internal/handlers/users"
-	users2 "github.com/PabloPei/SmartSpend-backend/internal/repositories/users"
+	"github.com/PabloPei/SmartSpend-backend/internal/users"
 	"github.com/gorilla/mux"
 )
 
@@ -31,7 +30,7 @@ func (s *APIServer) Run() {
 
 	subrouter.HandleFunc("/home", users.Home).Methods("POST", "GET")
 
-	userStore := users2.NewStore(s.db)
+	userStore := users.NewStore(s.db)
 	userHandler := users.NewHandler(userStore)
 	userHandler.RegisterRoutes(subrouter)
 

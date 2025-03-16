@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/PabloPei/SmartSpend-backend/internal/models"
-	"github.com/PabloPei/SmartSpend-backend/internal/services/auth"
+	"github.com/PabloPei/SmartSpend-backend/internal/auth"
 	"github.com/PabloPei/SmartSpend-backend/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
@@ -17,10 +16,10 @@ func Home(w http.ResponseWriter, r *http.Request) {
 }
 
 type Handler struct {
-	store models.UserStore
+	store UserStore
 }
 
-func NewHandler(store models.UserStore) *Handler {
+func NewHandler(store UserStore) *Handler {
 	return &Handler{store: store}
 }
 
@@ -31,7 +30,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 }
 
 func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
-	var user models.RegisterUserPayload
+	var user RegisterUserPayload
 	if err := utils.ParseJSON(r, &user); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
@@ -57,7 +56,7 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.store.CreateUser(models.User{
+	err = h.store.CreateUser(User{
 		UserName: user.UserName,
 		Email:    user.Email,
 		Password: hashedPassword,

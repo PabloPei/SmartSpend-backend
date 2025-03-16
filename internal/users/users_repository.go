@@ -1,10 +1,8 @@
-package users2
+package users
 
 import (
 	"database/sql"
 	"fmt"
-
-	"github.com/PabloPei/SmartSpend-backend/internal/models"
 )
 
 type Store struct {
@@ -16,7 +14,7 @@ func NewStore(db *sql.DB) *Store {
 }
 
 // CreateUser inserta un nuevo usuario en la base de datos.
-func (s *Store) CreateUser(user models.User) error {
+func (s *Store) CreateUser(user User) error {
 	_, err := s.db.Exec(
 		"INSERT INTO auth.\"user\" (user_name, email, password) VALUES ($1, $2, $3)",
 		user.UserName, user.Email, user.Password,
@@ -28,20 +26,20 @@ func (s *Store) CreateUser(user models.User) error {
 }
 
 // GetUserByEmail obtiene un usuario por su email.
-func (s *Store) GetUserByEmail(email string) (*models.User, error) {
+func (s *Store) GetUserByEmail(email string) (*User, error) {
 	row := s.db.QueryRow("SELECT * FROM auth.\"user\" WHERE email = $1", email)
 	return scanRowIntoUser(row)
 }
 
 // GetUserByID obtiene un usuario por su ID.
-func (s *Store) GetUserByID(id int) (*models.User, error) {
+func (s *Store) GetUserByID(id int) (*User, error) {
 	row := s.db.QueryRow("SELECT * FROM auth.\"user\" WHERE user_id = $1", id)
 	return scanRowIntoUser(row)
 }
 
 // scanRowIntoUser mapea los datos de una fila a una estructura User.
-func scanRowIntoUser(row *sql.Row) (*models.User, error) {
-	user := new(models.User)
+func scanRowIntoUser(row *sql.Row) (*User, error) {
+	user := new(User)
 	err := row.Scan(
 		&user.UserId,
 		&user.UserName,
