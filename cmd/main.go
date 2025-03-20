@@ -29,5 +29,8 @@ func main() {
 
 	serverCfg := conf.InitApiServerConfig()
 	server := api.NewAPIServer(serverCfg, db)
-	server.Run()
+	err = server.Run()
+
+	log.Fatal("Server Crash:", err)
+
 }

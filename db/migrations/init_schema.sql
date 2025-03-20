@@ -98,14 +98,12 @@ CREATE SCHEMA IF NOT EXISTS auth;
 CREATE TABLE auth."user" (
     user_id UUID DEFAULT gen_random_uuid(),
     user_name VARCHAR(50) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL, -- Campo de email con restricción de unicidad
-    password TEXT NOT NULL, -- Almacena la contraseña (se recomienda almacenar un hash)
+    email VARCHAR(255) UNIQUE NOT NULL, 
+    password TEXT NOT NULL,
     photo_url TEXT CHECK (photo_url ~* '^https?://.+'),
     language_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by INT,
     updated_at TIMESTAMP,
-    updated_by INT,
     CONSTRAINT fk_auth_user_language FOREIGN KEY (language_id) REFERENCES conf.language(language_id)
 );
 
@@ -182,3 +180,6 @@ CREATE TABLE auth.role_permission (
 COMMENT ON TABLE auth.role_permission IS 'Table that assigns permissions to roles';
 COMMENT ON COLUMN auth.role_permission.role_id IS 'Identifier of the role';
 COMMENT ON COLUMN auth.role_permission.permission_id IS 'Identifier of the assigned permission';
+
+
+-- Agregar trigger de update_at

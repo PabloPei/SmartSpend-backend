@@ -5,16 +5,15 @@ import (
 	"fmt"
 )
 
-type Store struct {
+type SQLRepository struct {
 	db *sql.DB
 }
 
-func NewStore(db *sql.DB) *Store {
-	return &Store{db: db}
+func NewSQLRepository(db *sql.DB) *SQLRepository {
+	return &SQLRepository{db: db}
 }
 
-// CreateUser inserta un nuevo usuario en la base de datos.
-func (s *Store) CreateUser(user User) error {
+func (s *SQLRepository) CreateUser(user User) error {
 	_, err := s.db.Exec(
 		"INSERT INTO auth.\"user\" (user_name, email, password) VALUES ($1, $2, $3)",
 		user.UserName, user.Email, user.Password,
@@ -22,30 +21,36 @@ func (s *Store) CreateUser(user User) error {
 	if err != nil {
 		return fmt.Errorf("error al crear usuario: %w", err)
 	}
+
 	return nil
 }
 
-// GetUserByEmail obtiene un usuario por su email.
-func (s *Store) GetUserByEmail(email string) (*User, error) {
-	row := s.db.QueryRow("SELECT * FROM auth.\"user\" WHERE email = $1", email)
+func (s *SQLRepository) UploadPhoto(photoUrl string, email string) error {
+
+	_, err := s.db.Exec(
+		"UPDATE auth.\"user\" SET photo_url = $1 WHERE email = $2",
+		photoUrl, email,
+	)
+
+	if err != nil {
+		return fmt.Errorf("error al actualizar la foto: %w", err)
+	}
+
+	return nil
+}
+
+func (s *SQLRepository) GetUserByEmail(email string) (*User, error) {
+	row := s.db.QueryRow("SELECT user_id, user_name, email FROM auth.\"user\" WHERE email = $1", email)
 	return scanRowIntoUser(row)
 }
 
-// GetUserByID obtiene un usuario por su ID.
-func (s *Store) GetUserByID(id int) (*User, error) {
-	row := s.db.QueryRow("SELECT * FROM auth.\"user\" WHERE user_id = $1", id)
-	return scanRowIntoUser(row)
-}
-
-// scanRowIntoUser mapea los datos de una fila a una estructura User.
+// scanRowIntoUser mapea los datos de una fila a una estructura User. Solucionar que devuelva todos los campos y no se rompa si esta null
 func scanRowIntoUser(row *sql.Row) (*User, error) {
 	user := new(User)
 	err := row.Scan(
 		&user.UserId,
 		&user.UserName,
 		&user.Email,
-		&user.Password,
-		&user.CreatedAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {

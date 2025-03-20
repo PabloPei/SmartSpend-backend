@@ -23,18 +23,18 @@ func NewAPIServer(cfg conf.ApiServerConfig, db *sql.DB) *APIServer {
 	}
 }
 
-func (s *APIServer) Run() {
+func (s *APIServer) Run() error {
 
 	router := mux.NewRouter()
 	subrouter := router.PathPrefix("/api/v1").Subrouter()
 
-	subrouter.HandleFunc("/home", users.Home).Methods("POST", "GET")
-
-	userStore := users.NewStore(s.db)
-	userHandler := users.NewHandler(userStore)
+	// user routes
+	userRepository := users.NewSQLRepository(s.db)
+	userService := users.NewService(userRepository)
+	userHandler := users.NewHandler(userService)
 	userHandler.RegisterRoutes(subrouter)
 
 	log.Println("Server running on", s.addr)
-	log.Fatal(http.ListenAndServe(s.addr, router))
+	return http.ListenAndServe(s.addr, router)
 
 }

@@ -4,67 +4,99 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/PabloPei/SmartSpend-backend/internal/auth"
 	"github.com/PabloPei/SmartSpend-backend/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
 
-// Home ahora tiene la firma correcta
-func Home(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to the Home Page")
-}
-
 type Handler struct {
-	store UserStore
+	service *Service
 }
 
-func NewHandler(store UserStore) *Handler {
-	return &Handler{store: store}
+func NewHandler(service *Service) *Handler {
+	return &Handler{service: service}
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/register", h.handleRegister).Methods("POST")
 
-	// admin routes
+	// User routes
+	router.HandleFunc("/user/register", h.handleUserRegister).Methods("POST")
+	router.HandleFunc("/user/photo/{email}", h.handleUserPhoto).Methods("POST", "PUT")
+
+	// Admin Routes
+	router.HandleFunc("/user/{email}", h.handleUser).Methods("GET")
 }
 
-func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
-	var user RegisterUserPayload
-	if err := utils.ParseJSON(r, &user); err != nil {
+func (h *Handler) handleUserRegister(w http.ResponseWriter, r *http.Request) {
+	var payload RegisterUserPayload
+	if err := utils.ParseJSON(r, &payload); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	if err := utils.Validate.Struct(user); err != nil {
+	if err := utils.Validate.Struct(payload); err != nil {
 		errors := err.(validator.ValidationErrors)
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
 		return
 	}
 
-	// check if user exists
-	_, err := h.store.GetUserByEmail(user.Email)
-	if err == nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("user with email %s already exists", user.Email))
-		return
-	}
-
-	// hash password
-	hashedPassword, err := auth.HashPassword(user.Password)
+	err := h.service.RegisterUser(payload)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err)
+		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	err = h.store.CreateUser(User{
-		UserName: user.UserName,
-		Email:    user.Email,
-		Password: hashedPassword,
+	utils.WriteJSON(w, http.StatusCreated, map[string]string{
+		"message": "User registered successfully",
 	})
+}
+
+func (h *Handler) handleUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	email, ok := vars["email"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing email"))
+		return
+	}
+
+	user, err := h.service.GetUserByEmail(email)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusCreated, nil)
+	utils.WriteJSON(w, http.StatusOK, user)
+}
+
+func (h *Handler) handleUserPhoto(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	email, ok := vars["email"]
+
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing email"))
+		return
+	}
+
+	var payload UploadPhotoPayload
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := utils.Validate.Struct(payload); err != nil {
+		errors := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		return
+	}
+
+	err := h.service.UploadPhoto(payload, email)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]string{
+		"message": "Photo uploaded successfully",
+	})
 }
