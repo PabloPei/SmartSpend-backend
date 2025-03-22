@@ -7,6 +7,10 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config Variables //
+var ServerConfig = InitApiServerConfig()
+var DatabaseConfig = InitPostgresSqlConfig()
+
 // Config structs //
 type PostgreSqlConfig struct {
 	DBUser     string

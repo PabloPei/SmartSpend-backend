@@ -12,11 +12,9 @@ func main() {
 
 	// PSQL Connection //
 
-	postgresCfg := conf.InitPostgresSqlConfig()
-
 	log.Println("Starting PostgreSQL connection...")
 
-	db, err := db.NewPostgresStorage(postgresCfg)
+	db, err := db.NewPostgresStorage(conf.DatabaseConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,8 +25,7 @@ func main() {
 
 	log.Println("Starting Api Server...")
 
-	serverCfg := conf.InitApiServerConfig()
-	server := api.NewAPIServer(serverCfg, db)
+	server := api.NewAPIServer(conf.ServerConfig, db)
 	err = server.Run()
 
 	log.Fatal("Server Crash:", err)

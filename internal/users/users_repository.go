@@ -40,7 +40,7 @@ func (s *SQLRepository) UploadPhoto(photoUrl string, email string) error {
 }
 
 func (s *SQLRepository) GetUserByEmail(email string) (*User, error) {
-	row := s.db.QueryRow("SELECT user_id, user_name, email FROM auth.\"user\" WHERE email = $1", email)
+	row := s.db.QueryRow("SELECT user_id, user_name, email, password FROM auth.\"user\" WHERE email = $1", email)
 	return scanRowIntoUser(row)
 }
 
@@ -51,6 +51,7 @@ func scanRowIntoUser(row *sql.Row) (*User, error) {
 		&user.UserId,
 		&user.UserName,
 		&user.Email,
+		&user.Password,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
