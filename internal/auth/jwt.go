@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/PabloPei/SmartSpend-backend/conf"
+	"github.com/PabloPei/SmartSpend-backend/internal/errors"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -13,13 +14,27 @@ type UserJWT struct {
 	UserName string
 }
 
-func CreateJWT(secret []byte, user UserJWT) (string, error) {
+type contextKey string
 
-	expiration := time.Duration(conf.ServerConfig.JWTExpirationInSeconds) * time.Second
-	expirationTime := time.Now().UTC().Add(expiration).Unix()
+const UserKey contextKey = "userId"
+
+func CreateJWT(user UserJWT, refreshToken bool) (string, error) {
+
+	var expirationTime int64
+	var secret []byte
+
+	if refreshToken {
+		secret = []byte(conf.ServerConfig.RefreshTokenSecret)
+		expiration := time.Duration(conf.ServerConfig.RefreshTokenExpirationInHours) * time.Hour
+		expirationTime = time.Now().UTC().Add(expiration).Unix()
+	} else {
+		secret = []byte(conf.ServerConfig.JWTSecret)
+		expiration := time.Duration(conf.ServerConfig.JWTExpirationInSeconds) * time.Second
+		expirationTime = time.Now().UTC().Add(expiration).Unix()
+	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"userID":    user.UserId,
+		"userId":    user.UserId,
 		"email":     user.Email,
 		"userName":  user.UserName,
 		"expiresAt": expirationTime,
@@ -31,4 +46,42 @@ func CreateJWT(secret []byte, user UserJWT) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+func ValidateJWT(tokenString string, refreshToken bool) (jwt.MapClaims, error) {
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.ErrSignMethod(token.Header["alg"].(string))
+		}
+
+		if refreshToken {
+			return []byte(conf.ServerConfig.RefreshTokenSecret), nil
+		} else {
+			return []byte(conf.ServerConfig.JWTSecret), nil
+		}
+
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, errors.ErrJWTInvalidToken
+	}
+
+	exp, ok := claims["expiresAt"].(float64)
+	if !ok {
+		return nil, errors.ErrJWTInvalidToken
+	}
+
+	expirationTime := int64(exp)
+	currentTime := time.Now().UTC().Unix()
+	if currentTime > expirationTime {
+		return nil, errors.ErrJWTTokenExpired
+	}
+
+	return claims, nil
 }

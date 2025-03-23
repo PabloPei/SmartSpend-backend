@@ -4,17 +4,20 @@
 CREATE SCHEMA IF NOT EXISTS conf;
 
 CREATE TABLE conf.language (
-    language_id INT PRIMARY KEY,
-    code VARCHAR(10),
+    code VARCHAR(10) PRIMARY KEY,
     name VARCHAR(50)
 );
 
 -- Comments for conf.language
 COMMENT ON TABLE conf.language IS 'Table of available languages for the application';
-COMMENT ON COLUMN conf.language.language_id IS 'Unique identifier for the language';
 COMMENT ON COLUMN conf.language.code IS 'Language code (e.g., en, es)';
 COMMENT ON COLUMN conf.language.name IS 'Full name of the language';
 
+INSERT INTO conf.language (code, name) VALUES
+    ('en', 'English'),
+    ('es', 'Español'),
+    ('zh', '中文 (Chinese)');
+    
 -- ===============================================
 -- Main Schema: core application data
 -- ===============================================
@@ -96,15 +99,15 @@ COMMENT ON COLUMN public.movement_field_options.value IS 'Value of the option';
 CREATE SCHEMA IF NOT EXISTS auth;
 
 CREATE TABLE auth."user" (
-    user_id UUID DEFAULT gen_random_uuid(),
+    user_id UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
     user_name VARCHAR(50) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL, 
+    email VARCHAR(255) UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    photo_url TEXT CHECK (photo_url ~* '^https?://.+'),
-    language_id INT,
+    photo_url TEXT CHECK (photo_url ~* '^https?://.+') DEFAULT 'https://userphoto.png',
+    language_code VARCHAR(10) DEFAULT 'es',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP,
-    CONSTRAINT fk_auth_user_language FOREIGN KEY (language_id) REFERENCES conf.language(language_id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_auth_user_language FOREIGN KEY (language_code) REFERENCES conf.language(code)
 );
 
 -- Comments for auth.user
@@ -112,7 +115,7 @@ COMMENT ON TABLE auth."user" IS 'Table of application users';
 COMMENT ON COLUMN auth."user".user_id IS 'Unique identifier for the user';
 COMMENT ON COLUMN auth."user".user_name IS 'Name of the user';
 COMMENT ON COLUMN auth."user".photo_url IS 'URL of the user''s photo';
-COMMENT ON COLUMN auth."user".language_id IS 'Identifier of the user''s preferred language';
+COMMENT ON COLUMN auth."user".language_code IS 'Identifier of the user''s preferred language';
 
 CREATE TABLE auth.role (
     role_id INT PRIMARY KEY,
@@ -180,6 +183,3 @@ CREATE TABLE auth.role_permission (
 COMMENT ON TABLE auth.role_permission IS 'Table that assigns permissions to roles';
 COMMENT ON COLUMN auth.role_permission.role_id IS 'Identifier of the role';
 COMMENT ON COLUMN auth.role_permission.permission_id IS 'Identifier of the assigned permission';
-
-
--- Agregar trigger de update_at

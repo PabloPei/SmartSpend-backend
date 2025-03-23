@@ -22,10 +22,12 @@ type PostgreSqlConfig struct {
 }
 
 type ApiServerConfig struct {
-	PublicHost             string
-	Port                   string
-	JWTSecret              string
-	JWTExpirationInSeconds int64
+	PublicHost                    string
+	Port                          string
+	JWTSecret                     string
+	JWTExpirationInSeconds        int64
+	RefreshTokenSecret            string
+	RefreshTokenExpirationInHours int64
 }
 
 // Configs Functions //
@@ -46,10 +48,12 @@ func InitApiServerConfig() ApiServerConfig {
 	godotenv.Load()
 
 	return ApiServerConfig{
-		PublicHost:             getEnv("PUBLIC_HOST", "0.0.0.0"),
-		Port:                   getEnv("PORT", "8080"),
-		JWTSecret:              getEnv("JWT_SECRET", "not-so-secret-now-is-it?"),
-		JWTExpirationInSeconds: getEnvAsInt("JWT_EXPIRATION_IN_SECONDS", 3600*24*7),
+		PublicHost:                    getEnv("PUBLIC_HOST", "0.0.0.0"),
+		Port:                          getEnv("PORT", "8080"),
+		JWTSecret:                     getEnv("JWT_SECRET", "not-so-secret-now-is-it?"),
+		JWTExpirationInSeconds:        getEnvAsInt("JWT_EXPIRATION_IN_SECONDS", 3600*1),
+		RefreshTokenSecret:            getEnv("REFRESH_TOKEN_SECRET", "not-so-secret-now-is-it?"),
+		RefreshTokenExpirationInHours: getEnvAsInt("REFRESH_TOKEN_EXPIRATION_IN_HOURS", 30*24),
 	}
 }
 

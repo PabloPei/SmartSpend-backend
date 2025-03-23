@@ -1,20 +1,21 @@
 package users
 
 import (
-	"github.com/PabloPei/SmartSpend-backend/conf"
 	"github.com/PabloPei/SmartSpend-backend/internal/auth"
 	"github.com/PabloPei/SmartSpend-backend/internal/errors"
+	"github.com/PabloPei/SmartSpend-backend/internal/models"
 )
 
 type Service struct {
-	repository UserRepository
+	repository models.UserRepository
 }
 
-func NewService(repository UserRepository) *Service {
+func NewService(repository models.UserRepository) *Service {
 	return &Service{repository: repository}
 }
 
-func (s *Service) RegisterUser(payload RegisterUserPayload) error {
+func (s *Service) RegisterUser(payload models.RegisterUserPayload) error {
+
 	_, err := s.repository.GetUserByEmail(payload.Email)
 	if err == nil {
 		return errors.ErrUserAlreadyExist(payload.Email)
@@ -25,7 +26,7 @@ func (s *Service) RegisterUser(payload RegisterUserPayload) error {
 		return errors.ErrHashingPassword(err)
 	}
 
-	user := User{
+	user := models.User{
 		UserName: payload.UserName,
 		Email:    payload.Email,
 		Password: hashedPassword,
@@ -34,29 +35,67 @@ func (s *Service) RegisterUser(payload RegisterUserPayload) error {
 	return s.repository.CreateUser(user)
 }
 
-func (s *Service) LogInUser(user LogInUserPayload) (string, error) {
+func (s *Service) LogInUser(user models.LogInUserPayload) (string, string, error) {
 
 	u, err := s.repository.GetUserByEmail(user.Email)
+
 	if err != nil {
-		return "", errors.ErrUserNotFound(user.Email)
+		return "", "", errors.ErrInvalidCredentials
 	}
 
 	if !auth.ComparePasswords(u.Password, []byte(user.Password)) {
-		return "", errors.ErrInvalidCredentials
+		return "", "", errors.ErrInvalidCredentials
 	}
 
 	userJWT := createJWTPayload(*u)
 
-	secret := []byte(conf.ServerConfig.JWTSecret)
-	token, err := auth.CreateJWT(secret, userJWT)
+	token, err := auth.CreateJWT(userJWT, false)
+	if err != nil {
+		return "", "", errors.ErrJWTCreation
+	}
+
+	refreshToken, err := auth.CreateJWT(userJWT, true)
+	if err != nil {
+		return "", "", errors.ErrJWTCreation
+	}
+
+	return token, refreshToken, nil
+}
+
+func (s *Service) GetUserPublicByEmail(email string) (*models.UserPublicPayload, error) {
+
+	u, err := s.repository.GetUserByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.UserPublicPayload{
+		UserId:   u.UserId,
+		Email:    u.Email,
+		UserName: u.UserName,
+	}, nil
+}
+
+func (s *Service) RefreshToken(userId []uint8) (string, error) {
+
+	user, err := s.repository.GetUserById(userId)
+
+	if err != nil {
+		return "", err
+	}
+
+	userJWT := createJWTPayload(*user)
+
+	accessToken, err := auth.CreateJWT(userJWT, false)
+
 	if err != nil {
 		return "", errors.ErrJWTCreation
 	}
 
-	return token, nil
+	return accessToken, nil
 }
 
-func (s *Service) UploadPhoto(payload UploadPhotoPayload, email string) error {
+func (s *Service) UploadPhoto(payload models.UploadPhotoPayload, email string) error {
 
 	_, err := s.repository.GetUserByEmail(email)
 	if err != nil {
@@ -66,13 +105,9 @@ func (s *Service) UploadPhoto(payload UploadPhotoPayload, email string) error {
 	return s.repository.UploadPhoto(payload.PhotoUrl, email)
 }
 
-func (s *Service) GetUserByEmail(email string) (*User, error) {
-	return s.repository.GetUserByEmail(email)
-}
-
 // Aux Functions
 
-func createJWTPayload(user User) auth.UserJWT {
+func createJWTPayload(user models.User) auth.UserJWT {
 
 	var userJWT auth.UserJWT
 

@@ -3,8 +3,12 @@ package users
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/PabloPei/SmartSpend-backend/internal/errors"
+	"github.com/PabloPei/SmartSpend-backend/internal/models"
 )
 
+// Postgres SQL Repository
 type SQLRepository struct {
 	db *sql.DB
 }
@@ -13,7 +17,7 @@ func NewSQLRepository(db *sql.DB) *SQLRepository {
 	return &SQLRepository{db: db}
 }
 
-func (s *SQLRepository) CreateUser(user User) error {
+func (s *SQLRepository) CreateUser(user models.User) error {
 	_, err := s.db.Exec(
 		"INSERT INTO auth.\"user\" (user_name, email, password) VALUES ($1, $2, $3)",
 		user.UserName, user.Email, user.Password,
@@ -39,25 +43,36 @@ func (s *SQLRepository) UploadPhoto(photoUrl string, email string) error {
 	return nil
 }
 
-func (s *SQLRepository) GetUserByEmail(email string) (*User, error) {
-	row := s.db.QueryRow("SELECT user_id, user_name, email, password FROM auth.\"user\" WHERE email = $1", email)
+func (s *SQLRepository) GetUserByEmail(email string) (*models.User, error) {
+	row := s.db.QueryRow("SELECT * FROM auth.\"user\" WHERE email = $1", email)
 	return scanRowIntoUser(row)
 }
 
-// scanRowIntoUser mapea los datos de una fila a una estructura User. Solucionar que devuelva todos los campos y no se rompa si esta null
-func scanRowIntoUser(row *sql.Row) (*User, error) {
-	user := new(User)
+func (s *SQLRepository) GetUserById(id []uint8) (*models.User, error) {
+	row := s.db.QueryRow("SELECT * FROM auth.\"user\" WHERE user_id = $1", id)
+	return scanRowIntoUser(row)
+}
+
+// TODO Hacer que devuelva todo, despeus el servicio filtra y photo scanRowIntoUser mapea los datos de una fila a una estructura User
+func scanRowIntoUser(row *sql.Row) (*models.User, error) {
+
+	user := new(models.User)
 	err := row.Scan(
 		&user.UserId,
 		&user.UserName,
 		&user.Email,
 		&user.Password,
+		&user.PhotoUrl,
+		&user.LanguageCode,
+		&user.CreatedAt,
+		&user.UpdatedAt,
 	)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("usuario no encontrado")
+			return nil, errors.ErrUserNotFound
 		}
-		return nil, fmt.Errorf("error al escanear usuario: %w", err)
+		return nil, errors.ErrUserScan(err.Error())
 	}
 	return user, nil
 }

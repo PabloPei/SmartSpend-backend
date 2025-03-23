@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/PabloPei/SmartSpend-backend/conf"
+	"github.com/PabloPei/SmartSpend-backend/internal/middlewares"
 	"github.com/PabloPei/SmartSpend-backend/internal/users"
 	"github.com/gorilla/mux"
 )
@@ -26,6 +27,11 @@ func NewAPIServer(cfg conf.ApiServerConfig, db *sql.DB) *APIServer {
 func (s *APIServer) Run() error {
 
 	router := mux.NewRouter()
+
+	// global middlewares
+	router.Use(middlewares.LoggingMiddleware)
+	router.Use(middlewares.RecoveryMiddleware)
+
 	subrouter := router.PathPrefix("/api/v1").Subrouter()
 
 	// user routes

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -30,14 +31,12 @@ func ParseJSON(r *http.Request, v any) error {
 
 func GetTokenFromRequest(r *http.Request) string {
 	tokenAuth := r.Header.Get("Authorization")
-	tokenQuery := r.URL.Query().Get("token")
 
 	if tokenAuth != "" {
+		if strings.HasPrefix(tokenAuth, "Bearer ") {
+			return strings.TrimPrefix(tokenAuth, "Bearer ")
+		}
 		return tokenAuth
-	}
-
-	if tokenQuery != "" {
-		return tokenQuery
 	}
 
 	return ""

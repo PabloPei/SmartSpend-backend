@@ -1,20 +1,21 @@
 package users
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/PabloPei/SmartSpend-backend/internal/errors"
+	"github.com/PabloPei/SmartSpend-backend/internal/middlewares"
+	"github.com/PabloPei/SmartSpend-backend/internal/models"
 	"github.com/PabloPei/SmartSpend-backend/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
 
 type Handler struct {
-	service *Service
+	service models.UserService
 }
 
-func NewHandler(service *Service) *Handler {
+func NewHandler(service models.UserService) *Handler {
 	return &Handler{service: service}
 }
 
@@ -23,23 +24,25 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	// User routes
 	router.HandleFunc("/user/register", h.handleUserRegister).Methods("POST")
 	router.HandleFunc("/user/login", h.handleLogin).Methods("POST")
-	router.HandleFunc("/user/photo/{email}", h.handleUserPhoto).Methods("POST", "PUT")
+	router.HandleFunc("/user/refresh-token", middlewares.WithRefreshTokenAuth(h.handleRefreshToken, h.service)).Methods("POST")
+	router.HandleFunc("/user/photo/{email}", middlewares.WithJWTAuth(h.handleUserPhoto, h.service)).Methods("POST", "PUT")
+	//logout se aplica desde el frontend
 
 	// Admin Routes
-	router.HandleFunc("/user/{email}", h.handleUser).Methods("GET")
+	router.HandleFunc("/user/{email}", middlewares.WithJWTAuth(h.handleGetUser, h.service)).Methods("GET")
 }
 
 func (h *Handler) handleUserRegister(w http.ResponseWriter, r *http.Request) {
 
-	var user RegisterUserPayload
+	var user models.RegisterUserPayload
 	if err := utils.ParseJSON(r, &user); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	if err := utils.Validate.Struct(user); err != nil {
-		errors := err.(validator.ValidationErrors)
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user: %v", errors))
+		validationErrors := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, errors.ErrInvalidaPayload(validationErrors.Error()))
 		return
 	}
 
@@ -56,7 +59,7 @@ func (h *Handler) handleUserRegister(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 
-	var user LogInUserPayload
+	var user models.LogInUserPayload
 
 	if err := utils.ParseJSON(r, &user); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
@@ -64,13 +67,13 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := utils.Validate.Struct(user); err != nil {
-		errors := err.(validator.ValidationErrors)
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		validationErrors := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, errors.ErrInvalidaPayload(validationErrors.Error()))
 		return
 	}
 
-	token, err := h.service.LogInUser(user)
-	if err == errors.ErrInvalidCredentials || err == errors.ErrUserNotFound(user.Email) {
+	token, refreshToken, err := h.service.LogInUser(user)
+	if err == errors.ErrInvalidCredentials || err == errors.ErrUserNotFound {
 		utils.WriteError(w, http.StatusUnauthorized, err)
 		return
 	} else if err != nil {
@@ -78,24 +81,39 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, map[string]string{"token": token})
+	utils.WriteJSON(w, http.StatusOK, map[string]string{"accessToken": token, "refreshToken": refreshToken})
 }
 
-func (h *Handler) handleUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	email, ok := vars["email"]
-	if !ok {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing email"))
+func (h *Handler) handleRefreshToken(w http.ResponseWriter, r *http.Request) {
+
+	userId := r.Context().Value(models.UserKey).([]uint8)
+
+	newAccessToken, err := h.service.RefreshToken(userId)
+	if err != nil {
+		utils.WriteError(w, http.StatusUnauthorized, err)
 		return
 	}
 
-	user, err := h.service.GetUserByEmail(email)
+	utils.WriteJSON(w, http.StatusOK, map[string]string{"accessToken": newAccessToken})
+
+}
+
+func (h *Handler) handleGetUser(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	email, ok := vars["email"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, errors.ErrUserNotFound)
+		return
+	}
+
+	userPublic, err := h.service.GetUserPublicByEmail(email)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, user)
+	utils.WriteJSON(w, http.StatusOK, userPublic)
 }
 
 func (h *Handler) handleUserPhoto(w http.ResponseWriter, r *http.Request) {
@@ -104,19 +122,19 @@ func (h *Handler) handleUserPhoto(w http.ResponseWriter, r *http.Request) {
 	email, ok := vars["email"]
 
 	if !ok {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing email"))
+		utils.WriteError(w, http.StatusBadRequest, errors.ErrInvalidaPayload("missing email"))
 		return
 	}
 
-	var payload UploadPhotoPayload
+	var payload models.UploadPhotoPayload
 	if err := utils.ParseJSON(r, &payload); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	if err := utils.Validate.Struct(payload); err != nil {
-		errors := err.(validator.ValidationErrors)
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		validationErrors := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, errors.ErrInvalidaPayload(validationErrors.Error()))
 		return
 	}
 
