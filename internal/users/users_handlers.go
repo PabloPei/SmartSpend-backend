@@ -24,12 +24,12 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	// User routes
 	router.HandleFunc("/user/register", h.handleUserRegister).Methods("POST")
 	router.HandleFunc("/user/login", h.handleLogin).Methods("POST")
-	router.HandleFunc("/user/refresh-token", middlewares.WithRefreshTokenAuth(h.handleRefreshToken, h.service)).Methods("POST")
-	router.HandleFunc("/user/photo/{email}", middlewares.WithJWTAuth(h.handleUserPhoto, h.service)).Methods("POST", "PUT")
+	router.HandleFunc("/user/refresh-token", middlewares.WithRefreshTokenAuth(h.handleRefreshToken)).Methods("POST")
+	router.HandleFunc("/user/photo/{email}", middlewares.WithJWTAuth(h.handleUserPhoto)).Methods("POST", "PUT")
 	//logout se aplica desde el frontend
 
 	// Admin Routes
-	router.HandleFunc("/user/{email}", middlewares.WithJWTAuth(h.handleGetUser, h.service)).Methods("GET")
+	router.HandleFunc("/user/{email}", middlewares.WithJWTAuth(h.handleGetUser)).Methods("GET")
 }
 
 func (h *Handler) handleUserRegister(w http.ResponseWriter, r *http.Request) {

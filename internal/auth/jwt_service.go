@@ -1,10 +1,12 @@
 package auth
 
 import (
+	"context"
 	"time"
 
 	"github.com/PabloPei/SmartSpend-backend/conf"
 	"github.com/PabloPei/SmartSpend-backend/internal/errors"
+	"github.com/PabloPei/SmartSpend-backend/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -13,10 +15,6 @@ type UserJWT struct {
 	Email    string
 	UserName string
 }
-
-type contextKey string
-
-const UserKey contextKey = "userId"
 
 func CreateJWT(user UserJWT, refreshToken bool) (string, error) {
 
@@ -84,4 +82,17 @@ func ValidateJWT(tokenString string, refreshToken bool) (jwt.MapClaims, error) {
 	}
 
 	return claims, nil
+}
+
+func GetUserIDFromContext(ctx context.Context) ([]uint8, error) {
+
+	userId, ok := ctx.Value(models.UserKey).(string)
+
+	userIdUint := []uint8(userId)
+
+	if !ok {
+		return nil, errors.ErrJWTInvalidToken
+	}
+
+	return userIdUint, nil
 }

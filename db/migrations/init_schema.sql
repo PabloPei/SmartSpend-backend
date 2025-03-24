@@ -24,28 +24,26 @@ INSERT INTO conf.language (code, name) VALUES
 CREATE SCHEMA IF NOT EXISTS public;
 
 CREATE TABLE public."group" (
-    group_id INT PRIMARY KEY,
-    default_weighing DECIMAL(10, 2),
-    name VARCHAR(50),
+    group_id UUID PRIMARY KEY DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+    group_name VARCHAR(50),
     description TEXT,
-    photo_url TEXT CHECK (photo_url ~* '^https?://.+'),
-    created_at TIMESTAMP,
-    created_by INT,
-    updated_at TIMESTAMP,
-    updated_by INT
+    photo_url TEXT CHECK (photo_url ~* '^https?://.+') DEFAULT 'https://groupphoto.png',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ,
+    created_by UUID,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID
 );
 
 -- Comments for public.group
 COMMENT ON TABLE public."group" IS 'Table of groups in the application';
 COMMENT ON COLUMN public."group".group_id IS 'Unique identifier for the group';
-COMMENT ON COLUMN public."group".default_weighing IS 'Default weighing value for the group';
-COMMENT ON COLUMN public."group".name IS 'Name of the group';
+COMMENT ON COLUMN public."group".group_name IS 'Name of the group';
 COMMENT ON COLUMN public."group".description IS 'Description of the group';
 COMMENT ON COLUMN public."group".photo_url IS 'URL of the representative photo for the group';
 
 CREATE TABLE public.movement (
     movement_id INT PRIMARY KEY,
-    group_id INT,
+    group_id UUID,
     amount DECIMAL(10, 2),
     created_at TIMESTAMP,
     created_by INT,
@@ -60,7 +58,7 @@ COMMENT ON COLUMN public.movement.amount IS 'Amount of the movement';
 
 CREATE TABLE public.movement_field (
     movement_field_id INT PRIMARY KEY,
-    group_id INT,
+    group_id UUID,
     movement_id INT,
     name VARCHAR(50),
     type VARCHAR(50),
@@ -94,7 +92,7 @@ COMMENT ON COLUMN public.movement_field_options.movement_field_id IS 'Identifier
 COMMENT ON COLUMN public.movement_field_options.value IS 'Value of the option';
 
 -- ===============================================
--- Authorization Schema: users, roles, permissions
+-- Authorization Schema: users, roles
 -- ===============================================
 CREATE SCHEMA IF NOT EXISTS auth;
 
@@ -118,42 +116,35 @@ COMMENT ON COLUMN auth."user".photo_url IS 'URL of the user''s photo';
 COMMENT ON COLUMN auth."user".language_code IS 'Identifier of the user''s preferred language';
 
 CREATE TABLE auth.role (
-    role_id INT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
+    role_id VARCHAR(1) PRIMARY KEY,
+    role_name VARCHAR(50) NOT NULL,
     description TEXT,
-    created_by INT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    updated_by INT
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Comments for auth.role
 COMMENT ON TABLE auth.role IS 'Table of defined roles in the application';
 COMMENT ON COLUMN auth.role.role_id IS 'Unique identifier for the role';
-COMMENT ON COLUMN auth.role.name IS 'Name of the role';
+COMMENT ON COLUMN auth.role.role_name IS 'Name of the role';
 COMMENT ON COLUMN auth.role.description IS 'Description of the role';
 
-CREATE TABLE auth.permission (
-    permission_id INT PRIMARY KEY,
-    description TEXT,
-    status VARCHAR(20)
-);
+INSERT INTO auth.role (role_id, role_name, description)
+VALUES
+    ('V', 'VIEWER', 'User with read-only access'),
+    ('E', 'EDITOR', 'User with editing capabilities'),
+    ('A', 'ADMIN', 'User with full administrative privileges');
 
--- Comments for auth.permission
-COMMENT ON TABLE auth.permission IS 'Table of available permissions in the application';
-COMMENT ON COLUMN auth.permission.permission_id IS 'Unique identifier for the permission';
-COMMENT ON COLUMN auth.permission.description IS 'Description of the permission';
-COMMENT ON COLUMN auth.permission.status IS 'Status of the permission (e.g., active, inactive)';
 
 CREATE TABLE auth.user_role (
     user_id UUID,
-    role_id INT,
-    group_id INT,
-    created_at TIMESTAMP,
-    created_by INT,
-    updated_at TIMESTAMP,
-    updated_by INT,
-    valid_until TIMESTAMP,
+    role_id VARCHAR(1),
+    group_id UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID,
+    valid_until TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, role_id),
     CONSTRAINT fk_user_role_user FOREIGN KEY (user_id) REFERENCES auth."user"(user_id),
     CONSTRAINT fk_user_role_role FOREIGN KEY (role_id) REFERENCES auth.role(role_id),
@@ -166,20 +157,3 @@ COMMENT ON COLUMN auth.user_role.user_id IS 'Identifier of the user';
 COMMENT ON COLUMN auth.user_role.role_id IS 'Identifier of the assigned role';
 COMMENT ON COLUMN auth.user_role.group_id IS 'Identifier of the group in which the role is assigned';
 COMMENT ON COLUMN auth.user_role.valid_until IS 'Date until the assignment is valid';
-
-CREATE TABLE auth.role_permission (
-    role_id INT,
-    permission_id INT,
-    created_at TIMESTAMP,
-    created_by INT,
-    updated_at TIMESTAMP,
-    updated_by INT,
-    PRIMARY KEY (role_id, permission_id),
-    CONSTRAINT fk_role_permission_role FOREIGN KEY (role_id) REFERENCES auth.role(role_id),
-    CONSTRAINT fk_role_permission_permission FOREIGN KEY (permission_id) REFERENCES auth.permission(permission_id)
-);
-
--- Comments for auth.role_permission
-COMMENT ON TABLE auth.role_permission IS 'Table that assigns permissions to roles';
-COMMENT ON COLUMN auth.role_permission.role_id IS 'Identifier of the role';
-COMMENT ON COLUMN auth.role_permission.permission_id IS 'Identifier of the assigned permission';

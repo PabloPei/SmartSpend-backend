@@ -53,7 +53,6 @@ func (s *SQLRepository) GetUserById(id []uint8) (*models.User, error) {
 	return scanRowIntoUser(row)
 }
 
-// TODO Hacer que devuelva todo, despeus el servicio filtra y photo scanRowIntoUser mapea los datos de una fila a una estructura User
 func scanRowIntoUser(row *sql.Row) (*models.User, error) {
 
 	user := new(models.User)

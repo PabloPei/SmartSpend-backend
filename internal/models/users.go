@@ -37,6 +37,7 @@ var UserKey ContextKey = "userId"
 type RegisterUserPayload struct {
 	UserName string `json:"userName" validate:"required"`
 	Email    string `json:"email" validate:"required,email"`
+	PhotoUrl string `json:"photoUrl" validate:"omitempty,uri"`
 	Password string `json:"password" validate:"required,min=3,max=130"`
 }
 

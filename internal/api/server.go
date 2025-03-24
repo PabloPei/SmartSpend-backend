@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/PabloPei/SmartSpend-backend/conf"
+	"github.com/PabloPei/SmartSpend-backend/internal/groups"
 	"github.com/PabloPei/SmartSpend-backend/internal/middlewares"
 	"github.com/PabloPei/SmartSpend-backend/internal/users"
 	"github.com/gorilla/mux"
@@ -39,6 +40,12 @@ func (s *APIServer) Run() error {
 	userService := users.NewService(userRepository)
 	userHandler := users.NewHandler(userService)
 	userHandler.RegisterRoutes(subrouter)
+
+	// group routes
+	groupRepository := groups.NewSQLRepository(s.db)
+	groupService := groups.NewService(groupRepository)
+	groupHandler := groups.NewHandler(groupService)
+	groupHandler.RegisterRoutes(subrouter)
 
 	log.Println("Server running on", s.addr)
 	return http.ListenAndServe(s.addr, router)
